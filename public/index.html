@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book an appointment</title>
+<style>
+  :root{
+    --ink:#12343b; --ink-soft:#4a6469; --paper:#f8faf9; --panel:#ffffff; --line:#d5e0dd;
+    --sage:#e2eeea; --accent:#0f6b63; --accent-ink:#ffffff; --danger:#a4261b; --danger-bg:#fdeceb;
+    --ok-bg:#e3f4ee;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --ink:#e4f0ed; --ink-soft:#9bb5b0; --paper:#0e1b1d; --panel:#152629; --line:#2a4348;
+      --sage:#1c3236; --accent:#5cc9bb; --accent-ink:#06201d; --danger:#ff9d94; --danger-bg:#3a1c1a; --ok-bg:#16352e; }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  h1,h2,h3{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;line-height:1.2;margin:0}
+  header{padding:32px 20px 8px;max-width:1040px;margin:0 auto}
+  header h1{font-size:clamp(1.9rem,4vw,2.6rem);letter-spacing:-.01em}
+  header p{margin:8px 0 0;color:var(--ink-soft);max-width:52ch}
+  main{max-width:1040px;margin:0 auto;padding:20px;display:grid;gap:24px;grid-template-columns:1.4fr 1fr;align-items:start}
+  @media (max-width:820px){ main{grid-template-columns:1fr} }
+  section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+  h2{font-size:1.25rem;margin-bottom:12px}
+  .day{margin-top:18px}
+  .day:first-of-type{margin-top:0}
+  .day h3{font-size:1rem;color:var(--ink-soft);font-family:inherit;font-weight:600;margin-bottom:8px}
+  .times{display:flex;flex-wrap:wrap;gap:8px}
+  .time{appearance:none;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
+    padding:9px 14px;border-radius:6px;font:inherit;font-variant-numeric:tabular-nums;cursor:pointer;min-width:84px}
+  .time:hover:not(:disabled){border-color:var(--accent)}
+  .time[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .time:disabled{background:transparent;color:var(--ink-soft);text-decoration:line-through;border-style:dashed;cursor:not-allowed;opacity:.7}
+  :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  label{display:block;font-weight:600;margin:14px 0 4px;font-size:.95rem}
+  input{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font:inherit}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button.primary{appearance:none;border:0;background:var(--accent);color:var(--accent-ink);padding:11px 18px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer;margin-top:18px}
+  button.primary:disabled{opacity:.55;cursor:wait}
+  button.link{appearance:none;background:none;border:0;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
+  .chosen{background:var(--sage);border-radius:6px;padding:10px 12px;margin-bottom:6px}
+  .msg{border-radius:6px;padding:10px 12px;margin-top:14px}
+  .msg.err{background:var(--danger-bg);color:var(--danger)}
+  .msg.ok{background:var(--ok-bg)}
+  .confirm h2{margin-bottom:6px}
+  dl{margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+  dt{color:var(--ink-soft)} dd{margin:0;word-break:break-all}
+  .small{font-size:.9rem;color:var(--ink-soft)}
+  ul.bk{list-style:none;padding:0;margin:12px 0 0}
+  ul.bk li{border-top:1px solid var(--line);padding:10px 0;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .empty{color:var(--ink-soft)}
+  .hidden{display:none}
+  @media (prefers-reduced-motion:no-preference){ .confirm{animation:pop .25s ease-out} }
+  @keyframes pop{from{transform:scale(.98);opacity:.4}to{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Book an appointment</h1>
+  <p>Pick a time that suits you, enter your details, and you will get your confirmation straight away.</p>
+</header>
+
+<main>
+  <section aria-labelledby="slots-h">
+    <h2 id="slots-h">Available times</h2>
+    <div id="slots" aria-live="polite"><p class="empty">Loading times…</p></div>
+  </section>
+
+  <div>
+    <section id="form-card">
+      <h2>Your details</h2>
+      <div id="chosen" class="chosen small">Choose a time on the left.</div>
+      <form id="form" novalidate>
+        <label for="name">Full name</label>
+        <input id="name" autocomplete="name" required>
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" required>
+        <label for="apikey">Clinic access key</label>
+        <input id="apikey" type="password" autocomplete="off">
+        <div class="small" style="margin-top:4px">Saved in this browser only.</div>
+        <button class="primary" id="submit" type="submit">Book this time</button>
+        <div id="error" class="msg err hidden" role="alert"></div>
+      </form>
+    </section>
+
+    <section id="confirm-card" class="confirm hidden" aria-live="polite">
+      <h2>Your appointment is confirmed</h2>
+      <p class="small" style="margin:0">Keep your booking reference in case you need to cancel.</p>
+      <dl id="confirm-dl"></dl>
+      <button class="primary" id="another" type="button">Book another time</button>
+    </section>
+
+    <section style="margin-top:24px">
+      <h2>Your bookings</h2>
+      <div class="row">
+        <input id="lookup-email" type="email" placeholder="Email used to book" aria-label="Email used to book" style="flex:1;min-width:180px">
+        <button class="primary" id="lookup" type="button" style="margin-top:0">Show bookings</button>
+      </div>
+      <ul class="bk" id="bookings"></ul>
+      <div class="row hidden" id="pager"><button class="link" id="prev" type="button">Previous</button><span class="small" id="pageinfo"></span><button class="link" id="next" type="button">Next</button></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const keyField = $('apikey');
+  keyField.value = localStorage.getItem('clinic_api_key') || new URLSearchParams(location.hash.slice(1)).get('key') || '';
+
+  let selected = null;
+  let pendingKey = null;   // Idempotency-Key reused while the same booking is being retried
+  let pendingSig = '';
+  let lookupPage = 1;
+
+  const api = async (path, opts = {}) => {
+    const res = await fetch(path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': keyField.value.trim(), ...(opts.headers || {}) },
+    });
+    let data = null;
+    try { data = await res.json(); } catch {}
+    return { res, data };
+  };
+
+  const fmtDay = (d) => d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  const fmtTime = (d) => d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const startOf = (s) => new Date(s.start || s.starts_at || s.start_time || s.startsAt || s.datetime || s.time);
+
+  function showError(msg) { const e = $('error'); e.textContent = msg; e.classList.remove('hidden'); }
+  function clearError() { $('error').classList.add('hidden'); }
+
+  async function loadSlots() {
+    const box = $('slots');
+    const { res, data } = await api('/slots');
+    if (res.status === 401) { box.innerHTML = '<p class="empty">Enter the clinic access key to see times.</p>'; return; }
+    if (!res.ok) { box.innerHTML = '<p class="empty">Times could not be loaded. Try again shortly.</p>'; return; }
+    const list = Array.isArray(data) ? data : (data.slots || []);
+    if (!list.length) { box.innerHTML = '<p class="empty">No times are open right now.</p>'; return; }
+
+    const days = new Map();
+    for (const s of list) {
+      const d = startOf(s);
+      if (isNaN(d)) continue;
+      const k = d.toDateString();
+      if (!days.has(k)) days.set(k, []);
+      days.get(k).push({ s, d });
+    }
+    box.innerHTML = '';
+    for (const items of days.values()) {
+      items.sort((a, b) => a.d - b.d);
+      const wrap = document.createElement('div'); wrap.className = 'day';
+      wrap.innerHTML = `<h3>${fmtDay(items[0].d)}</h3><div class="times"></div>`;
+      for (const { s, d } of items) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'time'; b.textContent = fmtTime(d);
+        b.disabled = s.available === false;
+        b.setAttribute('aria-pressed', selected && selected.id === s.id ? 'true' : 'false');
+        b.setAttribute('aria-label', `${fmtDay(d)} at ${fmtTime(d)}${b.disabled ? ', taken' : ''}`);
+        b.onclick = () => { selected = { id: s.id, label: `${fmtDay(d)}, ${fmtTime(d)}` }; clearError(); paintChosen(); loadSlots(); };
+        wrap.querySelector('.times').appendChild(b);
+      }
+      box.appendChild(wrap);
+    }
+  }
+
+  function paintChosen() {
+    $('chosen').textContent = selected ? selected.label : 'Choose a time on the left.';
+  }
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault(); clearError();
+    localStorage.setItem('clinic_api_key', keyField.value.trim());
+    if (!selected) return showError('Choose a time first.');
+    const name = $('name').value.trim(), email = $('email').value.trim();
+    if (!name) return showError('Enter your full name.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('Enter a valid email address.');
+
+    const body = { slot_id: selected.id, name, email };
+    const sig = JSON.stringify(body);
+    if (sig !== pendingSig) { pendingSig = sig; pendingKey = crypto.randomUUID(); } // same details = safe retry
+    const btn = $('submit'); btn.disabled = true; btn.textContent = 'Booking…';
+    try {
+      const { res, data } = await api('/bookings', { method: 'POST', body: sig, headers: { 'Idempotency-Key': pendingKey } });
+      if (res.status === 201) {
+        pendingKey = null; pendingSig = '';
+        const d = $('confirm-dl');
+        d.innerHTML = '';
+        const add = (k, v) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; d.append(dt, dd); };
+        add('When', selected.label); add('Name', data.name); add('Email', data.email); add('Status', data.status); add('Reference', data.id);
+        $('form-card').classList.add('hidden'); $('confirm-card').classList.remove('hidden');
+        selected = null; paintChosen(); loadSlots();
+      } else if (res.status === 409) { showError('Someone just booked that time. Pick another one.'); selected = null; paintChosen(); loadSlots(); }
+      else if (res.status === 401) showError('The clinic access key is missing or wrong.');
+      else if (res.status === 429) showError(`Too many attempts for this email. Try again in ${res.headers.get('Retry-After') || 'a few'} seconds.`);
+      else showError((data && data.error) ? data.error[0].toUpperCase() + data.error.slice(1) + '.' : 'Something went wrong. Try again.');
+    } catch { showError('No connection. Check your network and try again.'); }
+    finally { btn.disabled = false; btn.textContent = 'Book this time'; }
+  });
+
+  $('another').onclick = () => { $('confirm-card').classList.add('hidden'); $('form-card').classList.remove('hidden'); };
+
+  async function loadBookings() {
+    const email = $('lookup-email').value.trim();
+    const ul = $('bookings'); ul.innerHTML = '';
+    if (!email) { ul.innerHTML = '<li class="empty">Enter the email you booked with.</li>'; $('pager').classList.add('hidden'); return; }
+    const { res, data } = await api(`/bookings?email=${encodeURIComponent(email)}&page=${lookupPage}&limit=5`);
+    if (!res.ok) { ul.innerHTML = `<li class="empty">${(data && data.error) || 'Could not load bookings.'}</li>`; return; }
+    if (!data.data.length) { ul.innerHTML = '<li class="empty">No bookings for this email yet.</li>'; $('pager').classList.add('hidden'); return; }
+    for (const b of data.data) {
+      const li = document.createElement('li');
+      const span = document.createElement('span');
+      span.innerHTML = `<strong></strong><br><span class="small"></span>`;
+      span.querySelector('strong').textContent = `Slot ${b.slot_id}`;
+      span.querySelector('.small').textContent = `${b.status} · ${b.id.slice(0, 8)}`;
+      li.appendChild(span);
+      if (b.status === 'confirmed') {
+        const c = document.createElement('button'); c.className = 'link'; c.type = 'button'; c.textContent = 'Cancel';
+        c.onclick = async () => { await api(`/bookings/${b.id}`, { method: 'DELETE' }); loadBookings(); loadSlots(); };
+        li.appendChild(c);
+      }
+      ul.appendChild(li);
+    }
+    $('pager').classList.toggle('hidden', data.total_pages <= 1);
+    $('pageinfo').textContent = `Page ${data.page} of ${data.total_pages}`;
+    $('prev').disabled = data.page <= 1; $('next').disabled = data.page >= data.total_pages;
+  }
+  $('lookup').onclick = () => { lookupPage = 1; loadBookings(); };
+  $('prev').onclick = () => { lookupPage--; loadBookings(); };
+  $('next').onclick = () => { lookupPage++; loadBookings(); };
+  keyField.addEventListener('change', () => { localStorage.setItem('clinic_api_key', keyField.value.trim()); loadSlots(); });
+
+  loadSlots();
+})();
+</script>
+</body>
+</html>
